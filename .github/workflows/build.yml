@@ -1,49 +1,52 @@
-name: GitHub CI
+name: Build de4dot
+
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
     branches:
-      - master
-  release:
-    types: released
+      - main
 
 jobs:
   build:
-    name: Build
-    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            solution: de4dot.netcore.sln
+          - os: macos-latest
+            solution: de4dot.netcore.sln
+          - os: windows-latest
+            solution: de4dot.netcore.sln
+          - os: windows-latest
+            solution: de4dot.netframework.sln
+    runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v1
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      - name: Build
-        shell: pwsh
-        run: |
-          $msbuildPath = Split-Path (& "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -requires Microsoft.Component.MSBuild -find MSBuild\Current\Bin\amd64\MSBuild.exe | Select-Object -First 1) -Parent
-          $env:PATH = $msbuildPath + ';' + $env:PATH
-          .\build.ps1
-
-      - uses: actions/upload-artifact@v1
-        if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
+      - name: Setup .NET Core
+        if: matrix.solution == 'de4dot.netcore.sln'
+        uses: actions/setup-dotnet@v3
         with:
-          name: de4dot-net35
-          path: Release/net35
+          dotnet-version: '7.0.x'
 
-      - uses: actions/upload-artifact@v1
-        if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
-        with:
-          name: de4dot-net45
-          path: Release/net45
+      - name: Restore .NET Core dependencies
+        if: matrix.solution == 'de4dot.netcore.sln'
+        run: dotnet restore ${{ matrix.solution }}
 
-      - uses: actions/upload-artifact@v1
-        if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
-        with:
-          name: de4dot-netcoreapp2.1
-          path: publish-netcoreapp2.1
+      - name: Build .NET Core solution
+        if: matrix.solution == 'de4dot.netcore.sln'
+        run: dotnet build ${{ matrix.solution }} --configuration Release --no-restore
 
-      - uses: actions/upload-artifact@v1
-        if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
+      - name: Build .NET Framework solution
+        if: matrix.solution == 'de4dot.netframework.sln'
+        run: msbuild ${{ matrix.solution }} /p:Configuration=Release
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v3
         with:
-          name: de4dot-netcoreapp3.1
-          path: publish-netcoreapp3.1
+          name: de4dot-${{ matrix.os }}-${{ matrix.solution }}
+          path: '**/bin/Release/**'
