@@ -47,7 +47,7 @@ jobs:
         run: msbuild ${{ matrix.solution }} /p:Configuration=Release
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: de4dot-${{ matrix.os }}-${{ matrix.solution }}
           path: '**/bin/Release/**'
