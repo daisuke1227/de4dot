@@ -1,0 +1,53 @@
+name: Build de4dot
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            solution: de4dot.netcore.sln
+          - os: macos-latest
+            solution: de4dot.netcore.sln
+          - os: windows-latest
+            solution: de4dot.netcore.sln
+          - os: windows-latest
+            solution: de4dot.netframework.sln
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup .NET Core
+        if: matrix.solution == 'de4dot.netcore.sln'
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '7.0.x'
+
+      - name: Restore .NET Core dependencies
+        if: matrix.solution == 'de4dot.netcore.sln'
+        run: dotnet restore ${{ matrix.solution }}
+
+      - name: Build .NET Core solution
+        if: matrix.solution == 'de4dot.netcore.sln'
+        run: dotnet build ${{ matrix.solution }} --configuration Release --no-restore
+
+      - name: Build .NET Framework solution
+        if: matrix.solution == 'de4dot.netframework.sln'
+        run: msbuild ${{ matrix.solution }} /p:Configuration=Release
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: de4dot-${{ matrix.os }}-${{ matrix.solution }}
+          path: '**/bin/Release/**'
