@@ -22,7 +22,7 @@ jobs:
 
       - name: Build De4Dot
         run: |
-          dotnet build De4Dot.sln --configuration Release
+          dotnet build de4dot.netcore.sln --configuration Release
         shell: pwsh
 
       - name: Download Target File
