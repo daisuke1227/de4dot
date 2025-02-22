@@ -6,7 +6,8 @@ on:
       file_url:
         description: 'Direct URL to the DLL/EXE file to deobfuscate'
         required: true
-        default: 'https://example.com/yourfile.dll'
+        # Using v4 instead of v3 as requested.
+        default: 'https://github.com/daisuke1227/de4dot/releases/download/untagged-70696b41b27bd1a02194/QuantumV3.dll'
 
 jobs:
   deobfuscate:
@@ -29,17 +30,18 @@ jobs:
         shell: pwsh
         run: |
           Write-Host "Downloading file from '${{ github.event.inputs.file_url }}'"
-          Invoke-WebRequest -Uri "${{ github.event.inputs.file_url }}" -OutFile targetFile.exe
+          # Use curl with -L to follow redirects.
+          curl -L "${{ github.event.inputs.file_url }}" -o targetFile.dll
 
       - name: Run De4Dot Deobfuscation
         shell: pwsh
         run: |
-          Write-Host "Deobfuscating targetFile.exe..."
-          # Adjust the path to de4dot.exe as needed based on your build output folder.
-          .\bin\Release\net6.0\de4dot.exe targetFile.exe -o deobfuscated_output.exe
+          Write-Host "Deobfuscating targetFile.dll..."
+          # Adjust the path to de4dot.exe if needed.
+          .\bin\Release\net6.0\de4dot.exe targetFile.dll -o deobfuscated_output.dll
 
       - name: Upload Deobfuscated Artifact
         uses: actions/upload-artifact@v4
         with:
           name: deobfuscated_output
-          path: deobfuscated_output.exe
+          path: deobfuscated_output.dll
