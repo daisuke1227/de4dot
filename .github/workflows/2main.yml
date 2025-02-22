@@ -6,12 +6,13 @@ on:
       file_url:
         description: 'Direct URL to the DLL/EXE file to deobfuscate'
         required: true
-        # Using v4 instead of v3 as requested.
         default: 'https://github.com/daisuke1227/de4dot/releases/download/untagged-70696b41b27bd1a02194/QuantumV3.dll'
 
 jobs:
   deobfuscate:
     runs-on: windows-latest
+    env:
+      DOTNET_ROOT: C:\Program Files\dotnet
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -19,26 +20,40 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '6.0.x'  # Adjust if needed
+          dotnet-version: '6.0.x'
 
       - name: Build De4Dot
+        shell: pwsh
         run: |
           dotnet build de4dot.netcore.sln --configuration Release
-        shell: pwsh
 
       - name: Download Target File
         shell: pwsh
         run: |
           Write-Host "Downloading file from '${{ github.event.inputs.file_url }}'"
-          # Use curl with -L to follow redirects.
+          # Use curl with -L to follow any redirects.
           curl -L "${{ github.event.inputs.file_url }}" -o targetFile.dll
+
+      - name: Find de4dot.exe
+        id: find_exe
+        shell: pwsh
+        run: |
+          # Search recursively for de4dot.exe in the workspace.
+          $exePath = Get-ChildItem -Path .\ -Filter de4dot.exe -Recurse | Select-Object -First 1
+          if ($null -eq $exePath) {
+              Write-Error "de4dot.exe not found. Ensure the build produced it."
+              exit 1
+          }
+          Write-Host "Found de4dot.exe at $($exePath.FullName)"
+          echo "::set-output name=exe_path::$($exePath.FullName)"
 
       - name: Run De4Dot Deobfuscation
         shell: pwsh
         run: |
           Write-Host "Deobfuscating targetFile.dll..."
-          # Adjust the path to de4dot.exe if needed.
-          .\bin\Release\net6.0\de4dot.exe targetFile.dll -o deobfuscated_output.dll
+          $exe = "${{ steps.find_exe.outputs.exe_path }}"
+          # Run the de4dot executable against the target file.
+          & $exe targetFile.dll -o deobfuscated_output.dll
 
       - name: Upload Deobfuscated Artifact
         uses: actions/upload-artifact@v4
