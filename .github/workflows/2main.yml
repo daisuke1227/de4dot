@@ -1,53 +1,45 @@
-name: Build de4dot
+name: De4Dot Deobfuscation
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
+    inputs:
+      file_url:
+        description: 'Direct URL to the DLL/EXE file to deobfuscate'
+        required: true
+        default: 'https://example.com/yourfile.dll'
 
 jobs:
-  build:
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            solution: de4dot.netcore.sln
-          - os: macos-latest
-            solution: de4dot.netcore.sln
-          - os: windows-latest
-            solution: de4dot.netcore.sln
-          - os: windows-latest
-            solution: de4dot.netframework.sln
-    runs-on: ${{ matrix.os }}
-
+  deobfuscate:
+    runs-on: windows-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Setup .NET Core
-        if: matrix.solution == 'de4dot.netcore.sln'
+      - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: '7.0.x'
+          dotnet-version: '6.0.x'  # Adjust if needed
 
-      - name: Restore .NET Core dependencies
-        if: matrix.solution == 'de4dot.netcore.sln'
-        run: dotnet restore ${{ matrix.solution }}
+      - name: Build De4Dot
+        run: |
+          dotnet build De4Dot.sln --configuration Release
+        shell: pwsh
 
-      - name: Build .NET Core solution
-        if: matrix.solution == 'de4dot.netcore.sln'
-        run: dotnet build ${{ matrix.solution }} --configuration Release --no-restore
+      - name: Download Target File
+        shell: pwsh
+        run: |
+          Write-Host "Downloading file from '${{ github.event.inputs.file_url }}'"
+          Invoke-WebRequest -Uri "${{ github.event.inputs.file_url }}" -OutFile targetFile.exe
 
-      - name: Build .NET Framework solution
-        if: matrix.solution == 'de4dot.netframework.sln'
-        run: msbuild ${{ matrix.solution }} /p:Configuration=Release
+      - name: Run De4Dot Deobfuscation
+        shell: pwsh
+        run: |
+          Write-Host "Deobfuscating targetFile.exe..."
+          # Adjust the path to de4dot.exe as needed based on your build output folder.
+          .\bin\Release\net6.0\de4dot.exe targetFile.exe -o deobfuscated_output.exe
 
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+      - name: Upload Deobfuscated Artifact
+        uses: actions/upload-artifact@v3
         with:
-          name: de4dot-${{ matrix.os }}-${{ matrix.solution }}
-          path: '**/bin/Release/**'
+          name: deobfuscated_output
+          path: deobfuscated_output.exe
