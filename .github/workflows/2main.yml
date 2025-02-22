@@ -13,10 +13,10 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '6.0.x'  # Adjust if needed
 
@@ -39,7 +39,7 @@ jobs:
           .\bin\Release\net6.0\de4dot.exe targetFile.exe -o deobfuscated_output.exe
 
       - name: Upload Deobfuscated Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: deobfuscated_output
           path: deobfuscated_output.exe
