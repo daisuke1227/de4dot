@@ -1,11 +1,19 @@
+name: Build and Publish
+
 on:
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: windows-latest
+    # Run on Windows, Ubuntu, and macOS runners.
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    # Set DOTNET_ROOT only for Windows.
     env:
-      DOTNET_ROOT: C:\Program Files\dotnet
+      DOTNET_ROOT: ${{ matrix.os == 'windows-latest' && 'C:\Program Files\dotnet' || '' }}
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -15,39 +23,20 @@ jobs:
         with:
           dotnet-version: '6.0.x'
 
-      - name: Build De4Dot
+      # Use separate publish steps based on OS to ensure proper shell usage.
+      - name: Publish de4dot (Windows)
+        if: runner.os == 'Windows'
+        run: dotnet publish de4dot.netcore.sln --configuration Release --output ./publish
         shell: pwsh
-        run: |
-          dotnet build de4dot.netcore.sln --configuration Release
 
-      - name: Find de4dot.exe and DLL
-        id: find_files
-        shell: pwsh
-        run: |
-          # Find de4dot.exe
-          $exePath = Get-ChildItem -Path .\ -Filter de4dot.exe -Recurse | Select-Object -First 1
-          if ($null -eq $exePath) {
-              Write-Error "de4dot.exe not found. Ensure the build produced it."
-              exit 1
-          }
+      - name: Publish de4dot (Non-Windows)
+        if: runner.os != 'Windows'
+        run: dotnet publish de4dot.netcore.sln --configuration Release --output ./publish
+        shell: bash
 
-          # Find DLL file (adjust filter if necessary)
-          $dllPath = Get-ChildItem -Path .\ -Filter "*.dll" -Recurse | Select-Object -First 1
-          if ($null -eq $dllPath) {
-              Write-Error "No DLL file found. Ensure the build produced it."
-              exit 1
-          }
-
-          Write-Host "Found de4dot.exe at $($exePath.FullName)"
-          Write-Host "Found DLL file at $($dllPath.FullName)"
-          
-          echo "::set-output name=exe_path::$($exePath.FullName)"
-          echo "::set-output name=dll_path::$($dllPath.FullName)"
-
-      - name: Upload de4dot.exe and DLL Artifact
+      - name: Upload Published Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: de4dot_artifacts
-          path: |
-            ${{ steps.find_files.outputs.exe_path }}
-            ${{ steps.find_files.outputs.dll_path }}
+          # Tag the artifact with the OS name for clarity.
+          name: de4dot_artifacts_${{ matrix.os }}
+          path: publish
