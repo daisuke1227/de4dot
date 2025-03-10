@@ -5,12 +5,11 @@ on:
 
 jobs:
   build:
-    # Run on Windows, Ubuntu, and macOS runners.
-    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-    # Set DOTNET_ROOT only for Windows.
+    runs-on: ${{ matrix.os }}
+    # Set DOTNET_ROOT for Windows only
     env:
       DOTNET_ROOT: ${{ matrix.os == 'windows-latest' && 'C:\Program Files\dotnet' || '' }}
 
@@ -18,25 +17,25 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup .NET (for Build)
+      - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '6.0.x'
 
-      # Use separate publish steps based on OS to ensure proper shell usage.
-      - name: Publish de4dot (Windows)
+      # Publish step for Windows runners (using PowerShell)
+      - name: Publish de4dot Project (Windows)
         if: runner.os == 'Windows'
-        run: dotnet publish de4dot.netcore.sln --configuration Release --output ./publish
+        run: dotnet publish de4dot.netcore.csproj --configuration Release --framework netcoreapp3.1 --output ./publish
         shell: pwsh
 
-      - name: Publish de4dot (Non-Windows)
+      # Publish step for non-Windows runners (using Bash)
+      - name: Publish de4dot Project (Non-Windows)
         if: runner.os != 'Windows'
-        run: dotnet publish de4dot.netcore.sln --configuration Release --output ./publish
+        run: dotnet publish de4dot.netcore.csproj --configuration Release --framework netcoreapp3.1 --output ./publish
         shell: bash
 
       - name: Upload Published Artifacts
         uses: actions/upload-artifact@v4
         with:
-          # Tag the artifact with the OS name for clarity.
           name: de4dot_artifacts_${{ matrix.os }}
           path: publish
