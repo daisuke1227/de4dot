@@ -9,7 +9,6 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
-    # Set DOTNET_ROOT for Windows only
     env:
       DOTNET_ROOT: ${{ matrix.os == 'windows-latest' && 'C:\Program Files\dotnet' || '' }}
 
@@ -22,16 +21,14 @@ jobs:
         with:
           dotnet-version: '6.0.x'
 
-      # Publish step for Windows runners (using PowerShell)
       - name: Publish de4dot Project (Windows)
         if: runner.os == 'Windows'
-        run: dotnet publish de4dot.netcore.csproj --configuration Release --framework netcoreapp3.1 --output ./publish
+        run: dotnet publish de4dot/de4dot.csproj --configuration Release --framework netcoreapp3.1 --output ./publish
         shell: pwsh
 
-      # Publish step for non-Windows runners (using Bash)
       - name: Publish de4dot Project (Non-Windows)
         if: runner.os != 'Windows'
-        run: dotnet publish de4dot.netcore.csproj --configuration Release --framework netcoreapp3.1 --output ./publish
+        run: dotnet publish de4dot/de4dot.csproj --configuration Release --framework netcoreapp3.1 --output ./publish
         shell: bash
 
       - name: Upload Published Artifacts
